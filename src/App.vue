@@ -1,6 +1,6 @@
 <template>
   <div class="app">
-    <TitleBar />
+    <TitleBar v-if="false" />
     <ToolBar />
     <div class="main-content">
       <div class="sidebar">

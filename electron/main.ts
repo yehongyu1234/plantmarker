@@ -1,6 +1,10 @@
 import { app, BrowserWindow, ipcMain, dialog } from 'electron'
 import path from 'path'
 import fs from 'fs'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 let mainWindow: BrowserWindow | null = null
 
@@ -10,8 +14,6 @@ function createWindow() {
     height: 900,
     minWidth: 800,
     minHeight: 600,
-    frame: false,
-    titleBarStyle: 'hidden',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -22,13 +24,17 @@ function createWindow() {
 
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
-    mainWindow.webContents.openDevTools()
+    // mainWindow.webContents.openDevTools()
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
   }
 
   mainWindow.on('closed', () => {
     mainWindow = null
+  })
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('Window loaded, preload should be active')
   })
 }
 
@@ -69,6 +75,7 @@ ipcMain.handle('window-is-maximized', () => {
 
 // Select folder dialog
 ipcMain.handle('select-folder', async () => {
+  console.log('select-folder IPC called')
   const result = await dialog.showOpenDialog(mainWindow!, {
     properties: ['openDirectory'],
   })
@@ -108,7 +115,8 @@ ipcMain.handle('read-directory', async (_event: Electron.IpcMainInvokeEvent, fol
         path: path.join(folderPath, entry.name),
       }))
     return files
-  } catch {
+  } catch (err) {
+    console.error('read-directory error:', folderPath, err)
     return []
   }
 })
@@ -118,7 +126,8 @@ ipcMain.handle('read-text-file', async (_event: Electron.IpcMainInvokeEvent, fil
   try {
     const content = await fs.promises.readFile(filePath, 'utf-8')
     return content
-  } catch {
+  } catch (err) {
+    console.error('read-text-file error:', filePath, err)
     return null
   }
 })
@@ -147,7 +156,8 @@ ipcMain.handle('read-image-base64', async (_event: Electron.IpcMainInvokeEvent, 
     }
     const mime = mimeMap[ext] || 'image/jpeg'
     return `data:${mime};base64,${buffer.toString('base64')}`
-  } catch {
+  } catch (err) {
+    console.error('read-image-base64 error:', filePath, err)
     return null
   }
 })
@@ -174,7 +184,8 @@ ipcMain.handle('get-image-size', async (_event: Electron.IpcMainInvokeEvent, fil
       }
     }
     return null
-  } catch {
+  } catch (err) {
+    console.error('get-image-size error:', filePath, err)
     return null
   }
 })

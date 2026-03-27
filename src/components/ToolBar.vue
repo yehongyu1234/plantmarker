@@ -54,7 +54,9 @@ const annotationStore = useAnnotationStore()
 const plantStore = usePlantStore()
 
 async function selectFolder() {
+  console.log('selectFolder called, electronAPI:', typeof window.electronAPI)
   const folderPath = await window.electronAPI.selectFolder()
+  console.log('selected folder:', folderPath)
   if (folderPath) {
     await imageStore.loadFolder(folderPath)
     if (imageStore.images.length > 0) {

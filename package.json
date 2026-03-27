@@ -1,6 +1,7 @@
 {
   "name": "plant-marker",
   "version": "1.0.0",
+  "type": "module",
   "description": "Plant position annotation tool",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -42,5 +43,12 @@
       "target": "nsis",
       "icon": "public/icon.png"
     }
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild",
+      "vue-demi"
+    ]
   }
 }
