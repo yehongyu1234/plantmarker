@@ -22,6 +22,8 @@ interface ElectronAPI {
   writeFile: (filePath: string, content: string) => Promise<boolean>
   readImageBase64: (filePath: string) => Promise<string | null>
   getImageSize: (filePath: string) => Promise<{ width: number; height: number } | null>
+  readWorkspaceFile: (folderPath: string) => Promise<string | null>
+  writeWorkspaceFile: (folderPath: string, content: string) => Promise<boolean>
 }
 
 interface Window {

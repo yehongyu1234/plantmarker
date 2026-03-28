@@ -5,13 +5,26 @@
       <div v-if="annotationStore.selectedAnnotation" class="info-card">
         <div class="info-row">
           <span class="label">{{ t('annotation.plant') }}</span>
-          <select
-            :value="annotationStore.selectedAnnotation.plantName"
-            @change="onPlantChange"
-            class="select"
-          >
-            <option v-for="p in plantStore.plants" :key="p" :value="p">{{ p }}</option>
-          </select>
+          <div class="select-wrapper">
+            <input
+              v-model="plantSearchQuery"
+              class="select-search"
+              :placeholder="t('plantList.searchPlaceholder')"
+              @focus="showDropdown = true"
+              @keydown="onDropdownKeyDown"
+            />
+            <div v-if="showDropdown && filteredPlants.length > 0" class="dropdown">
+              <div
+                v-for="p in filteredPlants"
+                :key="p"
+                class="dropdown-item"
+                :class="{ active: p === annotationStore.selectedAnnotation?.plantName }"
+                @mousedown.prevent="selectPlant(p)"
+              >
+                {{ p }}
+              </div>
+            </div>
+          </div>
         </div>
         <div class="info-row">
           <span class="label">{{ t('annotation.points') }}</span>
@@ -61,17 +74,58 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed, watch } from 'vue'
 import { useAnnotationStore } from '@/stores/annotationStore'
 import { usePlantStore } from '@/stores/plantStore'
 import { t } from '@/utils/i18n'
+import { toPinyin, toPinyinInitials } from '@/utils/pinyin'
 
 const annotationStore = useAnnotationStore()
 const plantStore = usePlantStore()
 
-function onPlantChange(e: Event) {
-  const target = e.target as HTMLSelectElement
+const plantSearchQuery = ref('')
+const showDropdown = ref(false)
+
+const filteredPlants = computed(() => {
+  if (!plantSearchQuery.value.trim()) return plantStore.plants
+  const query = plantSearchQuery.value.trim().toLowerCase()
+  const queryPinyin = toPinyin(query)
+  const queryInitials = toPinyinInitials(query)
+
+  return plantStore.plants.filter(plant => {
+    const plantLower = plant.toLowerCase()
+    const plantPinyin = toPinyin(plant)
+    const plantInitials = toPinyinInitials(plant)
+
+    return plantLower.includes(query) ||
+           plantPinyin.includes(queryPinyin) ||
+           plantInitials.includes(queryInitials)
+  })
+})
+
+watch(() => annotationStore.selectedAnnotation, (ann) => {
+  if (ann) {
+    plantSearchQuery.value = ann.plantName
+  } else {
+    plantSearchQuery.value = ''
+  }
+  showDropdown.value = false
+})
+
+function selectPlant(plant: string) {
   if (annotationStore.selectedAnnotationId) {
-    annotationStore.updateAnnotationPlantName(annotationStore.selectedAnnotationId, target.value)
+    annotationStore.updateAnnotationPlantName(annotationStore.selectedAnnotationId, plant)
+  }
+  plantSearchQuery.value = plant
+  showDropdown.value = false
+}
+
+function onDropdownKeyDown(e: KeyboardEvent) {
+  if (e.key === 'Escape') {
+    showDropdown.value = false
+  }
+  if (e.key === 'Enter' && filteredPlants.value.length > 0) {
+    selectPlant(filteredPlants.value[0])
   }
 }
 
@@ -92,7 +146,7 @@ function onDelete() {
 .section {
   background: #252540;
   border-radius: 6px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .section-header {
@@ -126,7 +180,14 @@ function onDelete() {
   color: #ddd;
 }
 
-.select {
+.select-wrapper {
+  position: relative;
+  flex: 1;
+  margin-left: 8px;
+}
+
+.select-search {
+  width: 100%;
   background: #2a2a4a;
   border: 1px solid #444;
   border-radius: 4px;
@@ -134,6 +195,40 @@ function onDelete() {
   color: #ddd;
   font-size: 12px;
   outline: none;
+  box-sizing: border-box;
+}
+
+.select-search:focus {
+  border-color: #6366f1;
+}
+
+.dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #252540;
+  border: 1px solid #444;
+  border-radius: 4px;
+  max-height: 150px;
+  overflow-y: auto;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.dropdown-item {
+  padding: 4px 8px;
+  font-size: 12px;
+  color: #ddd;
+  cursor: pointer;
+}
+
+.dropdown-item:hover {
+  background: #2a2a4a;
+}
+
+.dropdown-item.active {
+  background: #3a3a5a;
 }
 
 .color-preview {

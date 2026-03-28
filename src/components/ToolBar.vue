@@ -54,14 +54,21 @@ const annotationStore = useAnnotationStore()
 const plantStore = usePlantStore()
 
 async function selectFolder() {
-  console.log('selectFolder called, electronAPI:', typeof window.electronAPI)
   const folderPath = await window.electronAPI.selectFolder()
-  console.log('selected folder:', folderPath)
-  if (folderPath) {
+  if (!folderPath) return
+
+  const wp = await import('@/utils/workspacePersistence')
+  wp.setAutosaveSuspended(true)
+  try {
     await imageStore.loadFolder(folderPath)
-    if (imageStore.images.length > 0) {
-      await imageStore.loadImage(0)
-    }
+    annotationStore.resetForNewFolder()
+    await wp.loadWorkspaceForFolder(folderPath)
+  } finally {
+    wp.setAutosaveSuspended(false)
+  }
+
+  if (imageStore.images.length > 0) {
+    await imageStore.loadImage(0)
   }
 }
 

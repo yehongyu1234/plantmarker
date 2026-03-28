@@ -47,6 +47,7 @@ export const useAnnotationStore = defineStore('annotation', () => {
     saveHistory(key)
     annotationsMap.value.set(key, [...existing, annotation])
     selectedAnnotationId.value = annotation.id
+    schedulePersist()
     return annotation
   }
 
@@ -59,6 +60,7 @@ export const useAnnotationStore = defineStore('annotation', () => {
     if (selectedAnnotationId.value === id) {
       selectedAnnotationId.value = null
     }
+    schedulePersist()
   }
 
   function updateAnnotationPlantName(id: string, plantName: string) {
@@ -74,6 +76,7 @@ export const useAnnotationStore = defineStore('annotation', () => {
         color: getPlantColor(plantName),
       }
       annotationsMap.value.set(key, [...existing])
+      schedulePersist()
     }
   }
 
@@ -102,6 +105,7 @@ export const useAnnotationStore = defineStore('annotation', () => {
     const entry = history.value[historyIndex.value]
     annotationsMap.value.set(entry.imageKey, JSON.parse(JSON.stringify(entry.annotations)))
     historyIndex.value--
+    schedulePersist()
   }
 
   function clearCurrentAnnotations() {
@@ -110,6 +114,18 @@ export const useAnnotationStore = defineStore('annotation', () => {
     saveHistory(key)
     annotationsMap.value.set(key, [])
     selectedAnnotationId.value = null
+    schedulePersist()
+  }
+
+  function replaceAnnotationsMap(map: Map<string, Annotation[]>) {
+    annotationsMap.value = map
+    selectedAnnotationId.value = null
+    history.value = []
+    historyIndex.value = -1
+  }
+
+  function resetForNewFolder() {
+    replaceAnnotationsMap(new Map())
   }
 
   return {
@@ -128,5 +144,11 @@ export const useAnnotationStore = defineStore('annotation', () => {
     getAnnotationBorderColor,
     undo,
     clearCurrentAnnotations,
+    replaceAnnotationsMap,
+    resetForNewFolder,
   }
 })
+
+function schedulePersist() {
+  void import('@/utils/workspacePersistence').then(m => m.scheduleWorkspaceSave())
+}

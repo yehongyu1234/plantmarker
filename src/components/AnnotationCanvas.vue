@@ -10,8 +10,45 @@
       @contextmenu.prevent
     />
     <div v-if="!imageStore.currentImage" class="empty-state">
-      <span>Select a folder and image to start</span>
+      <span>{{ t('empty.selectFolder') }}</span>
     </div>
+    <div v-if="hintsState === 'open'" class="canvas-hints" role="region" :aria-label="t('canvas.hintsTitle')">
+      <div class="canvas-hints-header">
+        <span class="canvas-hints-title">{{ t('canvas.hintsTitle') }}</span>
+        <div class="canvas-hints-actions" @mousedown.stop @click.stop>
+          <button type="button" class="hint-btn" @click="collapseHints">{{ t('canvas.hintsCollapse') }}</button>
+          <button type="button" class="hint-btn hint-btn-close" @click="closeHints">{{ t('canvas.hintsClose') }}</button>
+        </div>
+      </div>
+      <ul class="canvas-hints-list">
+        <li>{{ t('canvas.pan') }}</li>
+        <li>{{ t('canvas.zoom') }}</li>
+        <li>{{ t('canvas.selectMode') }}</li>
+        <li>{{ t('canvas.drawStroke') }}</li>
+        <li>{{ t('canvas.drawPan') }}</li>
+        <li>{{ t('canvas.pointMode') }}</li>
+        <li class="canvas-hints-autosave">{{ t('canvas.autosave') }}</li>
+        <li class="canvas-hints-keys">{{ t('canvas.keys') }}</li>
+      </ul>
+    </div>
+    <button
+      v-else-if="hintsState === 'collapsed'"
+      type="button"
+      class="canvas-hints-trigger"
+      :title="t('canvas.hintsShow')"
+      @click="expandHints"
+    >
+      {{ t('canvas.hintsTitle') }}
+    </button>
+    <button
+      v-else
+      type="button"
+      class="canvas-hints-trigger canvas-hints-trigger-minimal"
+      :title="t('canvas.hintsShow')"
+      @click="expandHints"
+    >
+      ?
+    </button>
   </div>
 </template>
 
@@ -23,12 +60,40 @@ import { usePlantStore } from '@/stores/plantStore'
 import type { Point, Annotation } from '@/types'
 import { rdpSimplify } from '@/utils/simplify'
 import { isPointInPolygon, snapToStart, distance } from '@/utils/geometry'
+import { t } from '@/utils/i18n'
 
 const imageStore = useImageStore()
 const annotationStore = useAnnotationStore()
 
+const HINTS_STORAGE_KEY = 'plantmarker-canvas-hints'
+
+type HintsState = 'open' | 'collapsed' | 'hidden'
+
+function readHintsState(): HintsState {
+  try {
+    const v = localStorage.getItem(HINTS_STORAGE_KEY)
+    if (v === 'collapsed' || v === 'hidden' || v === 'open') return v
+  } catch {
+    /* ignore */
+  }
+  return 'open'
+}
+
 const containerRef = ref<HTMLDivElement | null>(null)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
+const hintsState = ref<HintsState>(readHintsState())
+
+function collapseHints() {
+  hintsState.value = 'collapsed'
+}
+
+function closeHints() {
+  hintsState.value = 'hidden'
+}
+
+function expandHints() {
+  hintsState.value = 'open'
+}
 
 let ctx: CanvasRenderingContext2D | null = null
 let image: HTMLImageElement | null = null
@@ -337,7 +402,36 @@ function findAnnotationAtPoint(point: Point): Annotation | null {
   return null
 }
 
+/** 焦点在可编辑控件上时不拦截快捷键，避免 Backspace/Delete 删字时误删标注 */
+function isEditableKeyTarget(e: KeyboardEvent): boolean {
+  const el = e.target as HTMLElement | null
+  if (!el) return false
+  if (el.isContentEditable) return true
+  if (el.closest('[contenteditable="true"]')) return true
+  const tag = el.tagName
+  if (tag === 'TEXTAREA' || tag === 'SELECT') return true
+  if (tag === 'INPUT') {
+    const type = (el as HTMLInputElement).type
+    const nonText = new Set([
+      'button',
+      'checkbox',
+      'radio',
+      'submit',
+      'reset',
+      'range',
+      'file',
+      'color',
+      'image',
+      'hidden',
+    ])
+    return !nonText.has(type)
+  }
+  return false
+}
+
 function handleKeyDown(e: KeyboardEvent) {
+  if (isEditableKeyTarget(e)) return
+
   if (e.key === 'Delete' || e.key === 'Backspace') {
     if (annotationStore.selectedAnnotationId) {
       annotationStore.deleteAnnotation(annotationStore.selectedAnnotationId)
@@ -385,6 +479,14 @@ watch(() => annotationStore.selectedAnnotationId, () => {
   render()
 })
 
+watch(hintsState, state => {
+  try {
+    localStorage.setItem(HINTS_STORAGE_KEY, state)
+  } catch {
+    /* ignore */
+  }
+})
+
 onMounted(() => {
   ctx = canvasRef.value?.getContext('2d') || null
   resizeCanvas()
@@ -418,5 +520,126 @@ canvas {
   transform: translate(-50%, -50%);
   color: #666;
   font-size: 16px;
+  pointer-events: none;
+}
+
+.canvas-hints {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  max-width: min(320px, calc(100% - 20px));
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #9a9ab8;
+  text-align: right;
+  pointer-events: auto;
+  background: rgba(21, 21, 40, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+}
+
+.canvas-hints-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.canvas-hints-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #6b6b8a;
+  text-transform: uppercase;
+  flex: 1;
+  text-align: left;
+}
+
+.canvas-hints-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+.hint-btn {
+  padding: 2px 6px;
+  font-size: 10px;
+  color: #9a9ab8;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.hint-btn:hover {
+  background: rgba(99, 102, 241, 0.25);
+  color: #c4c4e0;
+}
+
+.hint-btn-close:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
+.canvas-hints-trigger {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  padding: 6px 10px;
+  font-size: 11px;
+  color: #8b8ba8;
+  background: rgba(21, 21, 40, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  transition: background 0.15s, color 0.15s;
+}
+
+.canvas-hints-trigger:hover {
+  background: rgba(42, 42, 74, 0.95);
+  color: #c8c8e0;
+}
+
+.canvas-hints-trigger-minimal {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.canvas-hints-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.canvas-hints-list li + li {
+  margin-top: 3px;
+}
+
+.canvas-hints-autosave {
+  margin-top: 4px;
+  font-size: 10px;
+  color: #7a8a9e;
+  line-height: 1.4;
+}
+
+.canvas-hints-keys {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  color: #7c7c9a;
+  font-size: 10px;
 }
 </style>

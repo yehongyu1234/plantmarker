@@ -1,10 +1,13 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+
+/** 与图片目录并列的自动保存文件（隐藏文件） */
+const WORKSPACE_ANNOTATIONS_FILENAME = '.plantmarker-annotations.json'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -15,7 +18,7 @@ function createWindow() {
     minWidth: 800,
     minHeight: 600,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,
       contextIsolation: true,
     },
@@ -38,7 +41,10 @@ function createWindow() {
   })
 }
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  Menu.setApplicationMenu(null)
+  createWindow()
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -118,6 +124,27 @@ ipcMain.handle('read-directory', async (_event: Electron.IpcMainInvokeEvent, fol
   } catch (err) {
     console.error('read-directory error:', folderPath, err)
     return []
+  }
+})
+
+// Workspace auto-save (next to image folder)
+ipcMain.handle('read-workspace-file', async (_event: Electron.IpcMainInvokeEvent, folderPath: string) => {
+  try {
+    const p = path.join(folderPath, WORKSPACE_ANNOTATIONS_FILENAME)
+    return await fs.promises.readFile(p, 'utf-8')
+  } catch {
+    return null
+  }
+})
+
+ipcMain.handle('write-workspace-file', async (_event: Electron.IpcMainInvokeEvent, folderPath: string, content: string) => {
+  try {
+    const p = path.join(folderPath, WORKSPACE_ANNOTATIONS_FILENAME)
+    await fs.promises.writeFile(p, content, 'utf-8')
+    return true
+  } catch (err) {
+    console.error('write-workspace-file', folderPath, err)
+    return false
   }
 })
 

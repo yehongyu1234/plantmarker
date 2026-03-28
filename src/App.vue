@@ -3,12 +3,14 @@
     <TitleBar v-if="false" />
     <ToolBar />
     <div class="main-content">
-      <div class="sidebar">
+      <div class="sidebar" :style="{ width: sidebarWidth + 'px' }">
         <ImageList />
         <PlantList />
       </div>
+      <div class="resize-handle" @mousedown="startResizeSidebar" />
       <AnnotationCanvas />
-      <div class="right-panel">
+      <div class="resize-handle" @mousedown="startResizeRightPanel" />
+      <div class="right-panel" :style="{ width: rightPanelWidth + 'px' }">
         <AnnotationInfo />
         <ExportPanel />
       </div>
@@ -17,7 +19,6 @@
       <span>{{ t('app.statusScale') }}: {{ Math.round(scale * 100) }}%</span>
       <span>{{ t('app.statusAnnotations') }}: {{ annotationStore.currentAnnotations.length }}</span>
       <span>{{ t('app.statusMode') }}: {{ annotationStore.currentPlantName ? t('app.modeDraw') : t('app.modeSelect') }}</span>
-      <span>{{ t('app.shortcuts') }}</span>
     </div>
   </div>
 </template>
@@ -36,8 +37,55 @@ import { t } from '@/utils/i18n'
 
 const annotationStore = useAnnotationStore()
 const scale = ref(1)
+const sidebarWidth = ref(200)
+const rightPanelWidth = ref(240)
+
+let isResizingSidebar = false
+let isResizingRightPanel = false
+let startX = 0
+let startWidth = 0
 
 provide('canvasScale', scale)
+
+function startResizeSidebar(e: MouseEvent) {
+  isResizingSidebar = true
+  startX = e.clientX
+  startWidth = sidebarWidth.value
+  document.addEventListener('mousemove', onMouseMove)
+  document.addEventListener('mouseup', onMouseUp)
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+
+function startResizeRightPanel(e: MouseEvent) {
+  isResizingRightPanel = true
+  startX = e.clientX
+  startWidth = rightPanelWidth.value
+  document.addEventListener('mousemove', onMouseMove)
+  document.addEventListener('mouseup', onMouseUp)
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+
+function onMouseMove(e: MouseEvent) {
+  if (isResizingSidebar) {
+    const delta = e.clientX - startX
+    sidebarWidth.value = Math.max(150, Math.min(400, startWidth + delta))
+  }
+  if (isResizingRightPanel) {
+    const delta = startX - e.clientX
+    rightPanelWidth.value = Math.max(180, Math.min(400, startWidth + delta))
+  }
+}
+
+function onMouseUp() {
+  isResizingSidebar = false
+  isResizingRightPanel = false
+  document.removeEventListener('mousemove', onMouseMove)
+  document.removeEventListener('mouseup', onMouseUp)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
 </script>
 
 <style scoped>
@@ -55,11 +103,9 @@ provide('canvasScale', scale)
 }
 
 .sidebar {
-  width: 200px;
   display: flex;
   flex-direction: column;
   background: #20203a;
-  border-right: 1px solid #333;
   overflow: hidden;
 }
 
@@ -74,12 +120,22 @@ provide('canvasScale', scale)
   border-top: 1px solid #333;
 }
 
+.resize-handle {
+  width: 4px;
+  background: #333;
+  cursor: col-resize;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.resize-handle:hover {
+  background: #6366f1;
+}
+
 .right-panel {
-  width: 240px;
   display: flex;
   flex-direction: column;
   background: #20203a;
-  border-left: 1px solid #333;
   padding: 12px;
   gap: 12px;
   overflow-y: auto;

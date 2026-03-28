@@ -54,3 +54,10 @@ export interface JsonlItem {
 }
 
 export type DrawMode = 'free' | 'point'
+
+/** 与当前图片文件夹同级的 .plantmarker-annotations.json */
+export interface WorkspaceAnnotationsFileV1 {
+  version: 1
+  savedAt: string
+  entries: Record<string, Annotation[]>
+}

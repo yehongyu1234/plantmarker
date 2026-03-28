@@ -4,6 +4,26 @@
       <span>{{ t('plantList.title') }}</span>
       <span class="count">{{ plantStore.plants.length }}</span>
     </div>
+    <div class="search-box">
+      <input
+        v-model="searchQuery"
+        :placeholder="t('plantList.searchPlaceholder')"
+        class="search-input"
+        @keydown="onSearchKeyDown"
+      />
+      <div v-if="searchQuery && filteredPlants.length > 0" class="search-results">
+        <div
+          v-for="(plant, index) in filteredPlants"
+          :key="plant"
+          class="search-item"
+          :class="{ active: plant === annotationStore.currentPlantName }"
+          @click="onSelect(plant)"
+        >
+          <div class="color-dot" :style="{ background: getColor(plant) }" />
+          <span class="plant-name">{{ plant }}</span>
+        </div>
+      </div>
+    </div>
     <div class="scroll-container">
       <div
         v-for="(plant, index) in plantStore.plants"
@@ -33,16 +53,35 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { usePlantStore } from '@/stores/plantStore'
 import { useAnnotationStore } from '@/stores/annotationStore'
 import { getPlantColor } from '@/utils/export'
 import { t } from '@/utils/i18n'
+import { toPinyin, toPinyinInitials } from '@/utils/pinyin'
 
 const plantStore = usePlantStore()
 const annotationStore = useAnnotationStore()
 
 const newPlantName = ref('')
+const searchQuery = ref('')
+
+const filteredPlants = computed(() => {
+  if (!searchQuery.value.trim()) return []
+  const query = searchQuery.value.trim().toLowerCase()
+  const queryPinyin = toPinyin(query)
+  const queryInitials = toPinyinInitials(query)
+
+  return plantStore.plants.filter(plant => {
+    const plantLower = plant.toLowerCase()
+    const plantPinyin = toPinyin(plant)
+    const plantInitials = toPinyinInitials(plant)
+
+    return plantLower.includes(query) ||
+           plantPinyin.includes(queryPinyin) ||
+           plantInitials.includes(queryInitials)
+  })
+})
 
 function getColor(name: string): string {
   return getPlantColor(name)
@@ -50,6 +89,22 @@ function getColor(name: string): string {
 
 function onSelect(plant: string) {
   annotationStore.currentPlantName = plant
+  searchQuery.value = ''
+}
+
+function onSearchKeyDown(e: KeyboardEvent) {
+  if (e.key === 'Enter' && filteredPlants.value.length > 0) {
+    onSelect(filteredPlants.value[0])
+  }
+  if (e.key === 'Escape') {
+    searchQuery.value = ''
+  }
+  if (e.key >= '1' && e.key <= '9' && filteredPlants.value.length > 0) {
+    const index = parseInt(e.key) - 1
+    if (index < filteredPlants.value.length) {
+      onSelect(filteredPlants.value[index])
+    }
+  }
 }
 
 function addPlant() {
@@ -85,6 +140,59 @@ function addPlant() {
   padding: 2px 6px;
   border-radius: 10px;
   font-size: 11px;
+}
+
+.search-box {
+  position: relative;
+  padding: 6px 8px;
+  border-bottom: 1px solid #333;
+}
+
+.search-input {
+  width: 100%;
+  background: #2a2a4a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 4px 8px;
+  color: #ddd;
+  font-size: 12px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.search-input:focus {
+  border-color: #6366f1;
+}
+
+.search-results {
+  position: absolute;
+  top: 100%;
+  left: 8px;
+  right: 8px;
+  background: #252540;
+  border: 1px solid #444;
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.search-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+  gap: 8px;
+}
+
+.search-item:hover {
+  background: #2a2a4a;
+}
+
+.search-item.active {
+  background: #3a3a5a;
 }
 
 .scroll-container {
