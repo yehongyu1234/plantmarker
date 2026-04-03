@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "description": "Plant position annotation tool",
+  "license": "MIT",
   "author": "PlantMarker",
   "main": "dist-electron/main.js",
   "scripts": {

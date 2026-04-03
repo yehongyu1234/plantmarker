@@ -1,5 +1,7 @@
 # PlantMarker - 植物位置标注软件
 
+**语言 / Languages:** 中文 · [English](README.en.md)
+
 ## 项目概述
 
 PlantMarker 是一款基于 Vue 3 + Electron 的桌面植物位置标注软件，用于标记图片中植物的位置和名称，支持导出标注数据用于机器学习训练。
@@ -270,19 +272,6 @@ function getPlantColor(name: string): string {
 
 扩展时方案：在 Electron 中嵌入 Python 子进程，或使用 HTTP 通信。
 
-## 开发计划
-
-| 阶段 | 内容 | 预计时间 |
-|------|------|----------|
-| P1 | 项目初始化、Electron + Vue 集成 | 1 天 |
-| P2 | 图片导入、画布渲染、缩放平移 | 2 天 |
-| P3 | 自由绘制 + RDP 简化算法 | 2 天 |
-| P4 | 标注管理（选中、编辑、删除） | 1 天 |
-| P5 | 植物名称导入、关联标注 | 1 天 |
-| P6 | JSON/JSONL 导出功能 | 1 天 |
-| P7 | 快捷键、UI 打磨、测试 | 1 天 |
-| P8 | Electron 打包、发布 | 1 天 |
-
 ## 开发命令
 
 ```bash
@@ -298,3 +287,7 @@ npm run typecheck
 # 打包 exe
 npm run build:win
 ```
+
+## 许可证
+
+本项目采用 [MIT 许可证](LICENSE) 发布。在保留版权声明与许可全文的前提下，可自由使用、复制、修改、合并、发布、再许可及销售本软件。
