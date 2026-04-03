@@ -249,32 +249,6 @@ function getPlantColor(name: string): string {
 }
 ```
 
-## Architecture
-
-### Why No Python Backend (Current Version)
-
-A FastAPI backend is not required for the current scope:
-
-| Need | Frontend / Electron | Notes |
-|------|---------------------|-------|
-| Local files | Electron `fs` API | Direct filesystem access |
-| Image folders | Electron dialog + `fs` | Folder pick and walk |
-| Text parsing | JavaScript | txt/csv in the renderer |
-| Line simplification | JavaScript | RDP in the frontend |
-| JSON/JSONL export | Electron `fs` API | Write to disk |
-| Canvas annotation | HTML5 Canvas | No server |
-
-### Possible Future Extensions
-
-If requirements grow, a Python backend could help with:
-- Integrated model training (PyTorch / TensorFlow)
-- Annotation storage in a database
-- Multi-user collaborative labeling
-- Auto-labeling (AI pre-annotation)
-
-Typical integration: embed a Python subprocess in Electron, or use HTTP.
-
-
 ## Commands
 
 ```bash

@@ -247,31 +247,6 @@ function getPlantColor(name: string): string {
 }
 ```
 
-## 架构决策
-
-### 为什么不需要 Python 后端
-
-当前版本不需要 FastAPI 后端，原因如下：
-
-| 需求 | 前端能力 | 说明 |
-|------|----------|------|
-| 本地文件读取 | Electron fs API | 直接访问本地文件系统 |
-| 图片文件夹扫描 | Electron dialog + fs | 选择文件夹并遍历 |
-| 文本文件解析 | JavaScript | 纯前端解析 txt/csv |
-| 线条简化算法 | JavaScript | RDP 算法纯前端实现 |
-| JSON/JSONL 导出 | Electron fs API | 直接写入本地文件 |
-| Canvas 标注 | HTML5 Canvas | 无需后端参与 |
-
-### 未来扩展考虑
-
-若后续需求扩展，可考虑添加 Python 后端：
-- 模型训练集成（PyTorch/TensorFlow）
-- 标注数据存储到数据库
-- 多用户协作标注
-- 自动标注（AI 预标注）
-
-扩展时方案：在 Electron 中嵌入 Python 子进程，或使用 HTTP 通信。
-
 ## 开发命令
 
 ```bash
